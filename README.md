@@ -36,10 +36,10 @@ dashboard-mpe-sp/
    ```
    python -m venv .venv
    .venv\Scripts\activate
-   pip install -r requirements.txt
+   pip install -r requirements-etl.txt
    ```
 
-2. Confira em [arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj](https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/)
+2. Confira no [compartilhamento de dados abertos do CNPJ](https://arquivos.receitafederal.gov.br/index.php/s/YggdBLfdninEJX9)
    qual é o mês de referência mais recente e ajuste `REFERENCIA` em
    `src/etl/config.py` se necessário.
 

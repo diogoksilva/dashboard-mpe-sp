@@ -7,6 +7,9 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+# Arquivos pequenos e já tratados que o dashboard publicado usa:
+!data/processed/mpe_por_municipio.parquet
+!data/processed/malha_sp.geojson
 
 .streamlit/secrets.toml
 .env

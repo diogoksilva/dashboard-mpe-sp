@@ -9,25 +9,21 @@ PROCESSED_DIR = ROOT_DIR / "data" / "processed"
 UF_ALVO = "SP"
 
 # Atualize para o mês/ano da base que deseja baixar.
-# Listagem de pastas disponíveis: https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/
-BASE_URL = "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj"
-REFERENCIA = "2025-08"  # AAAA-MM
+# Pastas disponíveis: https://arquivos.receitafederal.gov.br/index.php/s/YggdBLfdninEJX9
+BASE_URL = "https://arquivos.receitafederal.gov.br/public.php/webdav"
+# Token público do compartilhamento, usado como usuário (sem senha) no WebDAV.
+TOKEN_COMPARTILHAMENTO = "YggdBLfdninEJX9"
+REFERENCIA = "2026-10"  # AAAA-MM
 
 # Grupos de arquivo e quantidade de partes (0 a N-1) de cada um na pasta da RFB.
 # Os nomes/partes mudam ocasionalmente; conferir na listagem antes de rodar o download.
 ARQUIVOS_PARTICIONADOS = {
     "Empresas": 10,
     "Estabelecimentos": 10,
-    "Socios": 10,
 }
 ARQUIVOS_UNICOS = [
-    "Simples",
     "Cnaes",
     "Municipios",
-    "Naturezas",
-    "Paises",
-    "Qualificacoes",
-    "Motivos",
 ]
 
 # Layout oficial dos arquivos (separador ';', sem cabeçalho, encoding latin1)
@@ -79,6 +75,9 @@ COLUNAS_CNAES = ["codigo_cnae", "descricao_cnae"]
 
 # Códigos oficiais de situação cadastral (layout RFB)
 SITUACAO_ATIVA = "02"
+
+# Portes considerados MPE: microempresa e empresa de pequeno porte.
+PORTES_MPE = ["01", "03"]
 
 PORTE_LABELS = {
     "00": "Não informado",

@@ -5,14 +5,19 @@ Uso:
 """
 
 import json
+import math
+import sys
+from pathlib import Path
 
-import geobr
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from src.etl import config
-from src.etl.utils import normaliza_nome
+# Permite rodar com "streamlit run src/dashboard/app.py" a partir da raiz do projeto
+# (é assim que o Streamlit Community Cloud executa o app).
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from src.etl import config  # noqa: E402
 
 # Rampa sequencial azul (step 100 -> 700), do design system de dataviz do projeto.
 RAMPA_SEQUENCIAL = [
@@ -34,10 +39,10 @@ def carregar_dados_processados() -> pd.DataFrame | None:
 
 
 @st.cache_data
-def carregar_malha_municipios() -> pd.DataFrame:
-    gdf = geobr.read_municipality(code_muni="SP", year=2020)
-    gdf["nome_normalizado"] = gdf["name_muni"].map(normaliza_nome)
-    return gdf
+def carregar_malha_municipios() -> dict:
+    """GeoJSON simplificado da malha do IBGE, gerado pelo ETL (src/etl/transform.py)."""
+    with open(config.PROCESSED_DIR / "malha_sp.geojson", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def main() -> None:
@@ -64,27 +69,36 @@ def main() -> None:
     col1, col2, col3 = st.columns(3)
     col1.metric("MPEs ativas em SP", f"{total_ativas:,}".replace(",", "."))
     col2.metric("Município com mais MPEs", municipio_top)
-    col3.metric("% Microempresas", f"{pct_micro:.1f}%")
+    col3.metric("% Microempresas", f"{pct_micro:.1f}%".replace(".", ","))
 
     st.subheader("Distribuição geográfica")
-    gdf = carregar_malha_municipios()
-    mapa = gdf.merge(
-        agregado,
-        left_on="nome_normalizado",
-        right_on="nome_municipio_normalizado",
-        how="left",
+    st.caption(
+        "Escala de cor logarítmica: a capital concentra cerca de um terço das MPEs do "
+        "estado e, em escala linear, esconderia as diferenças entre os demais municípios."
     )
-    mapa["total_mpe_ativas"] = mapa["total_mpe_ativas"].fillna(0)
-
-    geojson = json.loads(mapa.to_json())
+    geojson = carregar_malha_municipios()
+    mapa = agregado.assign(
+        escala_log=agregado["total_mpe_ativas"].clip(lower=1).map(math.log10),
+        mpes_formatado=agregado["total_mpe_ativas"].map(lambda v: f"{v:,}".replace(",", ".")),
+    )
+    maximo = math.ceil(mapa["escala_log"].max())
+    marcas = list(range(0, maximo + 1))
     fig_mapa = px.choropleth(
         mapa,
         geojson=geojson,
-        locations=mapa.index,
-        color="total_mpe_ativas",
+        locations="code_muni",
+        featureidkey="properties.code_muni",
+        color="escala_log",
         color_continuous_scale=RAMPA_SEQUENCIAL,
-        hover_name="name_muni",
-        labels={"total_mpe_ativas": "MPEs ativas"},
+        range_color=(1, maximo),
+        hover_name="municipio",
+        hover_data={"escala_log": False, "code_muni": False, "mpes_formatado": True},
+        labels={"mpes_formatado": "MPEs ativas"},
+    )
+    fig_mapa.update_coloraxes(
+        colorbar_title="MPEs ativas",
+        colorbar_tickvals=marcas,
+        colorbar_ticktext=[f"{10 ** m:,}".replace(",", ".") for m in marcas],
     )
     fig_mapa.update_geos(fitbounds="locations", visible=False)
     fig_mapa.update_layout(margin=dict(l=0, r=0, t=0, b=0))
@@ -119,7 +133,9 @@ def main() -> None:
         st.plotly_chart(fig_porte, use_container_width=True, theme="streamlit")
 
     with st.expander("Ver dados por município"):
-        st.dataframe(agregado.drop(columns=["nome_municipio_normalizado"]))
+        tabela = agregado.drop(columns=["code_muni"]).set_index("municipio")
+        tabela = tabela.sort_values("total_mpe_ativas", ascending=False)
+        st.dataframe(tabela.rename(columns={"total_mpe_ativas": "Total de MPEs ativas"}))
 
 
 if __name__ == "__main__":
